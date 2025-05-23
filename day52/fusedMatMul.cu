@@ -82,7 +82,6 @@ int main()
     clock_t end_cpu = clock();
     double cpu_time = ((double)(end_cpu - start_cpu)) / CLOCKS_PER_SEC * 1000;
 
-    // Fused quantized GPU matmul
     cudaEvent_t start, stop;
     float fused_time = 0.0f;
     cudaEventCreate(&start);
@@ -101,7 +100,7 @@ int main()
     {
         float ref = c_cpu[i];
         float got = c_fused[i];
-        if (fabsf(ref - got) > 5.0f) // large error due to quantization
+        if (fabsf(ref - got) > 5.0f)
         {
             if (++errors < 10)
                 printf("Mismatch at %d: CPU=%.2f, Quant=%.2f\n", i, ref, got);
