@@ -62,4 +62,4 @@ Click on the links below to explore the details of each day's kernel to find a d
 - [**Day 52: Fused Quantized Matrix Multiplication**](./day52)
 - [**Day 53: Tiled and Fused Quantized Matrix Multiplication with cuBLASLt Comparison**](./day53)
 - [**Day 54: Per-Channel Quantized Matrix Multiplication**](./day54)
-- [**Day 55: FlashAttention: Fused CUDA Kernel for Softmax and MatMul in Transformer Attention**](./day54)
+- [**Day 55: FlashAttention: Fused CUDA Kernel for Softmax and MatMul in Transformer Attention**](./day55)
