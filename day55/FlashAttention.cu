@@ -11,25 +11,28 @@
 constexpr int block_row = 32;
 constexpr int block_col = 32;
 
+// Ensure shared memory fits within limit
 static_assert((3 * block_row * embed_dim + block_row * block_col) * 4 <= SMEM, "Shared memory usage exceeds shared memory size");
 
 constexpr int total_block_row = (token_len + block_row - 1) / block_row;
 constexpr int total_block_col = (token_len + block_col - 1) / block_col;
 
-
+// Forward kernel with always-on causal masking
 __global__ void flashAttentionForward(const float *Q, const float *K, const float *V, float *O, float *L, float *M, const float scale)
 {
     extern __shared__ float mem[];
-    
+
+    // Shared memory layout: Qi, Kj, Vj, score buffer
     float *Qi = mem;
-    float *Kj = mem + block_row * embed_dim;
-    float *Vj = mem + block_row * embed_dim + block_col * embed_dim;
-    float *S = mem + block_row * embed_dim + 2 * block_col * embed_dim;
-    
+    float *Kj = Qi + block_row * embed_dim;
+    float *Vj = Kj + block_col * embed_dim;
+    float *S  = Vj + block_col * embed_dim;
+
     int thread_x = threadIdx.x;
     int thread_y = threadIdx.y;
     int row_block = blockIdx.x;
-    
+
+    // Initialize softmax stats and output
     for (int i = thread_x; i < block_row && (row_block * block_row + i) < token_len; i += blockDim.x) 
     {
         int global_i = row_block * block_row + i;
@@ -41,189 +44,182 @@ __global__ void flashAttentionForward(const float *Q, const float *K, const floa
         }
     }
 
+    // Load Q into shared memory
     for (int i = thread_x; i < block_row && (row_block * block_row + i) < token_len; i += blockDim.x) 
     {
         for (int d = thread_y; d < embed_dim; d += blockDim.y) 
         {
             int global_i = row_block * block_row + i;
-            if (global_i < token_len) 
-            {
-                Qi[i * embed_dim + d] = Q[global_i * embed_dim + d];
-            } 
-            else 
-            {
-                Qi[i * embed_dim + d] = 0.0f;
-            }
-
+            Qi[i * embed_dim + d] = (global_i < token_len) ? Q[global_i * embed_dim + d] : 0.0f;
         }
     }
     __syncthreads();
-    
-    for (int col_block = 0; col_block < total_block_col; col_block++) {
+
+    // Loop over column tiles (K, V)
+    for (int col_block = 0; col_block < total_block_col; col_block++) 
+    {
+        if (col_block * block_col > (row_block + 1) * block_row - 1) 
+            break;
+
+        // Load K and V into shared memory
         for (int j = thread_x; j < block_col && (col_block * block_col + j) < token_len; j += blockDim.x) 
         {
             for (int d = thread_y; d < embed_dim; d += blockDim.y) 
             {
                 int global_j = col_block * block_col + j;
-                if (global_j < token_len) 
-                {
-                    Kj[j * embed_dim + d] = K[global_j * embed_dim + d];
-                    Vj[j * embed_dim + d] = V[global_j * embed_dim + d];
-                } 
-                else
-                {
-                    Kj[j * embed_dim + d] = 0.0f;
-                    Vj[j * embed_dim + d] = 0.0f;
-                }
-
+                Kj[j * embed_dim + d] = (global_j < token_len) ? K[global_j * embed_dim + d] : 0.0f;
+                Vj[j * embed_dim + d] = (global_j < token_len) ? V[global_j * embed_dim + d] : 0.0f;
             }
         }
         __syncthreads();
-        
+
+        // Compute QK^T with causal masking
         for (int i = thread_x; i < block_row && (row_block * block_row + i) < token_len; i += blockDim.x) 
         {
             for (int j = thread_y; j < block_col && (col_block * block_col + j) < token_len; j += blockDim.y) 
             {
+                int global_i = row_block * block_row + i;
+                int global_j = col_block * block_col + j;
+
                 float score = 0.0f;
                 for (int d = 0; d < embed_dim; d++) 
                 {
                     score += Qi[i * embed_dim + d] * Kj[j * embed_dim + d];
                 }
-                S[i * block_col + j] = score * scale;
+                S[i * block_col + j] = (global_j > global_i) ? -INFINITY : score * scale;
             }
         }
         __syncthreads();
-        
+
+        // Online softmax update + output accumulation
         if (thread_y == 0) {
             for (int i = thread_x; i < block_row && (row_block * block_row + i) < token_len; i += blockDim.x) 
             {
                 int global_i = row_block * block_row + i;
-
-                float row_max = -INFINITY;
-                for (int j = 0; j < block_col && (col_block * block_col + j) < token_len; j++) 
-                {
-                    row_max = fmaxf(row_max, S[i * block_col + j]);
-                }
-                
                 float old_max = M[global_i];
-                float new_max = fmaxf(old_max, row_max);
-                
-                float row_sum = 0.0f;
+                float old_sum = L[global_i];
+                float current_max = old_max;
+                float current_sum = 0.0f;
+
+                // Update max and normalization sum
                 for (int j = 0; j < block_col && (col_block * block_col + j) < token_len; j++) 
                 {
-                    row_sum += expf(S[i * block_col + j] - new_max);
+                    float score = S[i * block_col + j];
+                    if (score > current_max) 
+                    {
+                        float corr = expf(current_max - score);
+                        current_sum = current_sum * corr + 1.0f;
+                        current_max = score;
+                    } 
+                    else 
+                    {
+                        current_sum += expf(score - current_max);
+                    }
                 }
-                
-                float old_sum = L[global_i];
-                float correction = expf(old_max - new_max);
-                L[global_i] = correction * old_sum + row_sum;
-                M[global_i] = new_max;
-                
+
+                float final_max = fmaxf(old_max, current_max);
+                float old_corr = expf(old_max - final_max);
+                float new_corr = expf(current_max - final_max);
+                float norm = old_corr * old_sum + new_corr * current_sum;
+
+                M[global_i] = final_max;
+                L[global_i] = norm;
+
+                // Accumulate weighted V
                 for (int d = 0; d < embed_dim; d++) 
                 {
-                    float old_output = O[global_i * embed_dim + d];
-
                     float new_contrib = 0.0f;
                     for (int j = 0; j < block_col && (col_block * block_col + j) < token_len; j++) 
                     {
-                        float weight = expf(S[i * block_col + j] - new_max);
+                        float weight = expf(S[i * block_col + j] - final_max);
                         new_contrib += weight * Vj[j * embed_dim + d];
                     }
-                    
-                    O[global_i * embed_dim + d] = (correction * old_output + new_contrib) / L[global_i];
+                    float old_output = O[global_i * embed_dim + d];
+                    O[global_i * embed_dim + d] = (old_corr * old_output + new_contrib) / norm;
                 }
             }
         }
         __syncthreads();
     }
 }
-
 __global__ void flashAttentionBackward(const float *Q, const float *K, const float *V, const float *O, const float *dO, const float *L, const float *M, float *dQ, float *dK, float *dV, const float scale)
 {
     extern __shared__ float mem[];
-    
-    float *Qi = mem;
-    float *Kj = mem + block_row * embed_dim;
-    float *Vj = mem + block_row * embed_dim + block_col * embed_dim;
-    float *dOi = mem + block_row * embed_dim + 2 * block_col * embed_dim;
-    float *S = mem + 2 * block_row * embed_dim + 2 * block_col * embed_dim;
-    float *P = S + block_row * block_col;
-    float *dS = P + block_row * block_col;
-    
+
+    // Shared memory layout: Qi, Kj, Vj, dOi, score, prob, dS
+    float *Qi  = mem;
+    float *Kj  = Qi  + block_row * embed_dim;
+    float *Vj  = Kj  + block_col * embed_dim;
+    float *dOi = Vj  + block_col * embed_dim;
+    float *S   = dOi + block_row * embed_dim;
+    float *P   = S   + block_row * block_col;
+    float *dS  = P   + block_row * block_col;
+
     int thread_x = threadIdx.x;
     int thread_y = threadIdx.y;
     int row_block = blockIdx.x;
-    
+
+    // Load Q and dO into shared memory
     for (int i = thread_x; i < block_row && (row_block * block_row + i) < token_len; i += blockDim.x) 
     {
         for (int d = thread_y; d < embed_dim; d += blockDim.y) 
         {
             int global_i = row_block * block_row + i;
-            if (global_i < token_len) 
-            {
-                Qi[i * embed_dim + d] = Q[global_i * embed_dim + d];
-                dOi[i * embed_dim + d] = dO[global_i * embed_dim + d];
-            } 
-            else 
-            {
-                Qi[i * embed_dim + d] = 0.0f;
-                dOi[i * embed_dim + d] = 0.0f;
-            }
+            Qi[i * embed_dim + d]  = (global_i < token_len) ? Q[global_i * embed_dim + d]  : 0.0f;
+            dOi[i * embed_dim + d] = (global_i < token_len) ? dO[global_i * embed_dim + d] : 0.0f;
         }
     }
-    __syncthreads();
-    
+
+    // Zero out dQ
     for (int i = thread_x; i < block_row && (row_block * block_row + i) < token_len; i += blockDim.x) 
     {
         for (int d = thread_y; d < embed_dim; d += blockDim.y) 
         {
             int global_i = row_block * block_row + i;
-            if (global_i < token_len) 
-            {
-                dQ[global_i * embed_dim + d] = 0.0f;
-            }
+            dQ[global_i * embed_dim + d] = 0.0f;
         }
     }
     __syncthreads();
-    
+
+    // Loop over column tiles
     for (int col_block = 0; col_block < total_block_col; col_block++) 
     {
+        if (col_block * block_col > (row_block + 1) * block_row - 1) 
+            break;
+
+        // Load K and V into shared memory
         for (int j = thread_x; j < block_col && (col_block * block_col + j) < token_len; j += blockDim.x) 
         {
             for (int d = thread_y; d < embed_dim; d += blockDim.y) 
             {
                 int global_j = col_block * block_col + j;
-                if (global_j < token_len) 
-                {
-                    Kj[j * embed_dim + d] = K[global_j * embed_dim + d];
-                    Vj[j * embed_dim + d] = V[global_j * embed_dim + d];
-                } 
-                else 
-                {
-                    Kj[j * embed_dim + d] = 0.0f;
-                    Vj[j * embed_dim + d] = 0.0f;
-                }
+                Kj[j * embed_dim + d] = (global_j < token_len) ? K[global_j * embed_dim + d] : 0.0f;
+                Vj[j * embed_dim + d] = (global_j < token_len) ? V[global_j * embed_dim + d] : 0.0f;
             }
         }
         __syncthreads();
-        
+
+        // Recompute scores and softmax probs
         for (int i = thread_x; i < block_row && (row_block * block_row + i) < token_len; i += blockDim.x) 
         {
             for (int j = thread_y; j < block_col && (col_block * block_col + j) < token_len; j += blockDim.y) 
             {
+                int global_i = row_block * block_row + i;
+                int global_j = col_block * block_col + j;
+
                 float score = 0.0f;
                 for (int d = 0; d < embed_dim; d++) 
                 {
                     score += Qi[i * embed_dim + d] * Kj[j * embed_dim + d];
                 }
-                S[i * block_col + j] = score * scale;
-                
-                int global_i = row_block * block_row + i;
-                P[i * block_col + j] = expf(S[i * block_col + j] - M[global_i]) / L[global_i];
+                float scaled_score = (global_j > global_i) ? -INFINITY : score * scale;
+                S[i * block_col + j] = scaled_score;
+                P[i * block_col + j] = (global_j > global_i) ? 0.0f : expf(scaled_score - M[global_i]) / L[global_i];
             }
         }
         __syncthreads();
-        
+
+        // Compute dV = P^T * dO
         for (int j = thread_x; j < block_col && (col_block * block_col + j) < token_len; j += blockDim.x) 
         {
             for (int d = thread_y; d < embed_dim; d += blockDim.y) 
@@ -242,31 +238,36 @@ __global__ void flashAttentionBackward(const float *Q, const float *K, const flo
         }
         __syncthreads();
 
+        // Compute dS
         for (int i = thread_x; i < block_row && (row_block * block_row + i) < token_len; i += blockDim.x) 
         {
-            float diag_term = 0.0f;
             int global_i = row_block * block_row + i;
-            if (global_i < token_len) 
+            float diag_term = 0.0f;
+            for (int d = 0; d < embed_dim; d++) 
             {
-                for (int d = 0; d < embed_dim; d++) 
-                {
-                    diag_term += dOi[i * embed_dim + d] * O[global_i * embed_dim + d];
-                }
+                diag_term += dOi[i * embed_dim + d] * O[global_i * embed_dim + d];
             }
-            
             for (int j = thread_y; j < block_col && (col_block * block_col + j) < token_len; j += blockDim.y) 
             {
-                float dot_product = 0.0f;
-                for (int d = 0; d < embed_dim; d++) 
+                int global_j = col_block * block_col + j;
+                if (global_j > global_i) 
                 {
-                    dot_product += dOi[i * embed_dim + d] * Vj[j * embed_dim + d];
+                    dS[i * block_col + j] = 0.0f;
+                } 
+                else 
+                {
+                    float dot = 0.0f;
+                    for (int d = 0; d < embed_dim; d++) 
+                    {
+                        dot += dOi[i * embed_dim + d] * Vj[j * embed_dim + d];
+                    }
+                    dS[i * block_col + j] = P[i * block_col + j] * (dot - diag_term);
                 }
-                
-                dS[i * block_col + j] = P[i * block_col + j] * (dot_product - diag_term);
             }
         }
         __syncthreads();
-        
+
+        // Compute dQ = dS * K
         for (int i = thread_x; i < block_row && (row_block * block_row + i) < token_len; i += blockDim.x) 
         {
             for (int d = thread_y; d < embed_dim; d += blockDim.y) 
@@ -277,14 +278,12 @@ __global__ void flashAttentionBackward(const float *Q, const float *K, const flo
                     grad_sum += dS[i * block_col + j] * Kj[j * embed_dim + d];
                 }
                 int global_i = row_block * block_row + i;
-                if (global_i < token_len) 
-                {
-                    dQ[global_i * embed_dim + d] += grad_sum * scale;
-                }
+                dQ[global_i * embed_dim + d] += grad_sum * scale;
             }
         }
         __syncthreads();
-        
+
+        // Compute dK = dS^T * Q
         for (int j = thread_x; j < block_col && (col_block * block_col + j) < token_len; j += blockDim.x) 
         {
             for (int d = thread_y; d < embed_dim; d += blockDim.y) 
