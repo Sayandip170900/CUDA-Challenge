@@ -23,7 +23,6 @@
 
 **Visualization Insights :** The plots comparing FP64 and INT8 output distributions for ReLU and Sigmoid visually reinforce the numerical range and precision differences.  FP64 outputs exhibit a continuous distribution, while INT8 outputs show a clear step-like, quantized distribution due to the limited number of representable values in 8-bit integers.
 
-<<<<<<< HEAD
 ![Distribution of Activation Function Outputs (FP64 vs INT8)](distributions.jpg)
 
 **Results (for N=2^26):**
@@ -33,11 +32,8 @@
 **ReLU FP16:** Time = 15.39 ms, GFLOPS = 4.36, Range = [0.00, 1000.00]  
 **ReLU INT8:** Time = 8.97 ms,  GFLOPS = 7.48, Range = [0, 127]  
 =======
-<<<<<<< HEAD
-![Distribution of Activation Function Outputs (FP64 vs INT8)](distributions.png)
-=======
 ![Distribution of Activation Function Outputs (FP64 vs INT8)](distributions.jpg)
->>>>>>> 95525e2 (Day26 updates)
+
 
 **Results (for N=2^26):**
 
@@ -45,14 +41,12 @@
 **ReLU FP32:** Time = 25.69 ms, GFLOPS = 2.61, Range = [0.00, 1000.00]
 **ReLU FP16:** Time = 15.39 ms, GFLOPS = 4.36, Range = [0.00, 1000.00]
 **ReLU INT8:** Time = 8.97 ms,  GFLOPS = 7.48, Range = [0, 127]
->>>>>>> 244fe98 (Day26 updates)
 
 **Sigmoid FP64:** Time = 53.37 ms, GFLOPS = 1.26, Range = [0.00, 1.00]  
 **Sigmoid FP32:** Time = 25.76 ms, GFLOPS = 2.60, Range = [0.00, 1.00]  
 **Sigmoid FP16:** Time = 16.60 ms, GFLOPS = 4.04, Range = [0.00, 1.00]  
 **Sigmoid INT8:** Time = 11.20 ms, GFLOPS = 5.99, Range = [0, 127]  
 
-<<<<<<< HEAD
 **Tanh FP64:** Time = 53.21 ms, GFLOPS = 1.26, Range = [-1.00, 1.00]  
 **Tanh FP32:** Time = 26.52 ms, GFLOPS = 2.53, Range = [-1.00, 1.00]  
 **Tanh FP16:** Time = 15.32 ms, GFLOPS = 4.38, Range = [-1.00, 1.00]  
@@ -62,14 +56,12 @@
 **Sigmoid FP32:** Time = 25.76 ms, GFLOPS = 2.60, Range = [0.00, 1.00]
 **Sigmoid FP16:** Time = 16.60 ms, GFLOPS = 4.04, Range = [0.00, 1.00]
 **Sigmoid INT8:** Time = 11.20 ms, GFLOPS = 5.99, Range = [0, 127]
->>>>>>> 244fe98 (Day26 updates)
 
 **Linear FP64:** Time = 2.24 ms,  GFLOPS = 30.02, Range = [-1000.00, 1000.00]  
 **Linear FP32:** Time = 2.33 ms,  GFLOPS = 28.78, Range = [-1000.00, 1000.00]  
 **Linear FP16:** Time = 2.20 ms,  GFLOPS = 30.48, Range = [-1000.00, 1000.00]  
 **Linear INT8:** Time = 2.19 ms,  GFLOPS = 30.68, Range = [-128, 127]  
 
-<<<<<<< HEAD
 **LeakyReLU FP64:** Time = 54.84 ms, GFLOPS = 1.22, Range = [-10.00, 1000.00]  
 **LeakyReLU FP32:** Time = 26.66 ms, GFLOPS = 2.52, Range = [-10.00, 1000.00]  
 **LeakyReLU FP16:** Time = 14.19 ms, GFLOPS = 4.73, Range = [-10.00, 1000.00]  
@@ -79,14 +71,12 @@
 **Tanh FP32:** Time = 26.52 ms, GFLOPS = 2.53, Range = [-1.00, 1.00]
 **Tanh FP16:** Time = 15.32 ms, GFLOPS = 4.38, Range = [-1.00, 1.00]
 **Tanh INT8:** Time = 8.94 ms,  GFLOPS = 7.50, Range = [-127, 127]
->>>>>>> 244fe98 (Day26 updates)
 
 **GELU FP64:** Time = 51.87 ms, GFLOPS = 1.29, Range = [-0.17, 1000.00]  
 **GELU FP32:** Time = 26.56 ms, GFLOPS = 2.53, Range = [-0.17, 1000.00]  
 **GELU FP16:** Time = 15.25 ms, GFLOPS = 4.40, Range = [-0.17, 1000.00]  
 **GELU INT8:** Time = 8.98 ms,  GFLOPS = 7.48, Range = [-126, 124]
 
-<<<<<<< HEAD
 =======
 **Linear FP64:** Time = 2.24 ms,  GFLOPS = 30.02, Range = [-1000.00, 1000.00]
 **Linear FP32:** Time = 2.33 ms,  GFLOPS = 28.78, Range = [-1000.00, 1000.00]
@@ -104,7 +94,6 @@
 **GELU FP32:** Time = 26.56 ms, GFLOPS = 2.53, Range = [-0.17, 1000.00]
 **GELU FP16:** Time = 15.25 ms, GFLOPS = 4.40, Range = [-0.17, 1000.00]
 **GELU INT8:** Time = 8.98 ms,  GFLOPS = 7.48, Range = [-126, 124]
->>>>>>> 244fe98 (Day26 updates)
 
 **Results Analysis:**
 - **Performance Scaling with Precision:**  As precision decreases from FP64 to INT8, the execution time consistently reduces, and GFLOPS increases for all activation functions.  Significant speedups are observed with FP16 and INT8 compared to FP32 and especially FP64. For computationally intensive functions like Sigmoid, Tanh, and GELU, the speedup from FP64 to INT8 is substantial (approximately 5-6x faster in terms of time, and correspondingly higher GFLOPS).  Linear activation, being a simple pass-through, already exhibits high GFLOPS even in FP64, and the gains in lower precision are less dramatic in percentage terms but still present in absolute time.
