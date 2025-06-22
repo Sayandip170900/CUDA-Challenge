@@ -8,7 +8,7 @@
 #include <algorithm>
 
 #define N 1024
-#define TILE 16
+#define TILE 32
 
 __global__ void init(float *x, unsigned int seed)
 {
@@ -22,7 +22,7 @@ __global__ void init(float *x, unsigned int seed)
     }
 }
 
-__global__ void matMulFusedTiledQuant(float *a, float *b, half *c, float scale_a, float scale_b)
+__global__ void matMulOptimizedINT8(const int8_t *a, const int8_t *b, half *c, float scale_a, float scale_b)
 {
     __shared__ int8_t tile_a[TILE][TILE];
     __shared__ int8_t tile_b[TILE][TILE];
@@ -34,21 +34,16 @@ __global__ void matMulFusedTiledQuant(float *a, float *b, half *c, float scale_a
 
     int32_t acc = 0;
 
-    for (int m = 0; m < N / TILE; m++)
+    for (int m = 0; m < (N + TILE - 1) / TILE; m++)
     {
+        // Load from pre-quantized int8 matrices
         if (row < N && (m * TILE + tx) < N)
-        {
-            float val_a = a[row * N + m * TILE + tx];
-            tile_a[ty][tx] = max(-128, min(127, __float2int_rn(val_a / scale_a)));
-        }
+            tile_a[ty][tx] = a[row * N + m * TILE + tx];
         else
             tile_a[ty][tx] = 0;
 
         if (col < N && (m * TILE + ty) < N)
-        {
-            float val_b = b[(m * TILE + ty) * N + col];
-            tile_b[ty][tx] = max(-128, min(127, __float2int_rn(val_b / scale_b)));
-        }
+            tile_b[ty][tx] = b[(m * TILE + ty) * N + col];
         else
             tile_b[ty][tx] = 0;
 
@@ -69,7 +64,7 @@ __global__ void matMulFusedTiledQuant(float *a, float *b, half *c, float scale_a
     }
 }
 
-void runCuBLASLtINT8(const int8_t *a_i8, const int8_t *b_i8, half *c_fp16)
+void runCuBLASLtINT8(const int8_t *a_i8, const int8_t *b_i8, half *c_fp16, float scale_a, float scale_b)
 {
     cublasLtHandle_t ltHandle;
     cublasLtMatmulDesc_t opDesc;
@@ -89,8 +84,8 @@ void runCuBLASLtINT8(const int8_t *a_i8, const int8_t *b_i8, half *c_fp16)
     cublasLtMatmulPreferenceCreate(&preference);
     cublasLtMatmulPreferenceSetAttribute(preference, CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES, &workspaceSize, sizeof(workspaceSize));
 
-    int32_t alpha = 1;
-    int32_t beta = 0;
+    float alpha = scale_a * scale_b;
+    float beta = 0.0f;
 
     cublasLtMatmul(ltHandle, opDesc, &alpha, a_i8, aLayout, b_i8, bLayout, &beta, c_fp16, cLayout, c_fp16, cLayout, NULL, workspace, workspaceSize, 0);
 
@@ -102,7 +97,7 @@ int main()
 {
     float *a_fp32, *b_fp32;
     int8_t *a_int8, *b_int8;
-    half *c_fused, *c_cublas;
+    half *c_optimized, *c_cublas;
 
     size_t size_fp32 = N * N * sizeof(float);
     size_t size_int8 = N * N * sizeof(int8_t);
@@ -112,7 +107,7 @@ int main()
     cudaMallocManaged(&b_fp32, size_fp32);
     cudaMallocManaged(&a_int8, size_int8);
     cudaMallocManaged(&b_int8, size_int8);
-    cudaMallocManaged(&c_fused, size_fp16);
+    cudaMallocManaged(&c_optimized, size_fp16);
     cudaMallocManaged(&c_cublas, size_fp16);
 
     dim3 threads(TILE, TILE);
@@ -131,31 +126,31 @@ int main()
         b_int8[i] = static_cast<int8_t>(std::max(-128, std::min(127, static_cast<int>(std::round(b_fp32[i] / scale_b)))));
     }
 
-    float fused_time = 0.0f;
+    float kernel_time = 0.0f;
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
     cudaEventRecord(start);
-    matMulFusedTiledQuant<<<blocks, threads>>>(a_fp32, b_fp32, c_fused, scale_a, scale_b);
+    matMulOptimizedINT8<<<blocks, threads>>>(a_int8, b_int8, c_optimized, scale_a, scale_b);
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&fused_time, start, stop);
+    cudaEventElapsedTime(&optimized_time, start, stop);
 
     float cublas_time = 0.0f;
     cudaEventRecord(start);
-    runCuBLASLtINT8(a_int8, b_int8, c_cublas);
+    runCuBLASLtINT8(a_int8, b_int8, c_cublas, scale_a, scale_b);
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&cublas_time, start, stop);
 
-    printf("Fused Tiled (int8→fp16): %.2f ms\n", fused_time);
+    printf("Custom INT8: %.2f ms\n", kernel_time);
     printf("cuBLASLt INT8 GEMM: %.2f ms\n", cublas_time);
 
     cudaFree(a_fp32);
     cudaFree(b_fp32);
     cudaFree(a_int8);
     cudaFree(b_int8);
-    cudaFree(c_fused);
+    cudaFree(c_optimized);
     cudaFree(c_cublas);
 
     return 0;
