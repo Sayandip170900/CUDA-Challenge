@@ -64,3 +64,4 @@ Click on the links below to explore the details of each day's kernel to find a d
 - [**Day 54: Per-Channel Quantized Matrix Multiplication**](./day54)
 - [**Day 55: FlashAttention: Fused CUDA Kernel for Softmax and MatMul in Transformer Attention**](./day55)
 - [**Day 56: Multi-GPU Kernel Launch in CUDA**](./day56)
+- [**Day 57: Multi-GPU CUDA Kernel for 2D Convolution with Shared Memory and Nsight Profiling**](./day57)

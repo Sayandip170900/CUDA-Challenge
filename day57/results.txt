@@ -1,0 +1,137 @@
+Found 8 GPU(s)
+Max image size: 20 megapixels
+Found 68 images to process
+
+GPU 0 processed 10 images
+GPU 0 total time: 1.38132 seconds
+GPU 0 average/image: 0.138132 seconds
+GPU 0 throughput: 7.23945 images/sec
+
+GPU 1 processed 10 images
+GPU 1 total time: 1.60363 seconds
+GPU 1 average/image: 0.160363 seconds
+GPU 1 throughput: 6.23587 images/sec
+
+GPU 2 processed 7 images
+GPU 2 total time: 1.32394 seconds
+GPU 2 average/image: 0.189135 seconds
+GPU 2 throughput: 5.28724 images/sec
+
+GPU 3 processed 8 images
+GPU 3 total time: 1.11546 seconds
+GPU 3 average/image: 0.139433 seconds
+GPU 3 throughput: 7.1719 images/sec
+
+GPU 4 processed 8 images
+GPU 4 total time: 1.20238 seconds
+GPU 4 average/image: 0.150298 seconds
+GPU 4 throughput: 6.65346 images/sec
+
+GPU 5 processed 5 images
+GPU 5 total time: 1.70777 seconds
+GPU 5 average/image: 0.341554 seconds
+GPU 5 throughput: 2.9278 images/sec
+
+GPU 6 processed 10 images
+GPU 6 total time: 1.16663 seconds
+GPU 6 average/image: 0.116663 seconds
+GPU 6 throughput: 8.57168 images/sec
+
+GPU 7 processed 9 images
+GPU 7 total time: 1.81637 seconds
+GPU 7 average/image: 0.201819 seconds
+GPU 7 throughput: 4.95493 images/sec
+
+=== OVERALL SUMMARY ===
+Total processing time: 5.39573 seconds
+Overall throughput: 12.6026 images/sec
+
+
+
+
+
+
+
+** OS Runtime Summary (osrt_sum):
+
+ Time (%)  Total Time (ns)  Num Calls    Avg (ns)       Med (ns)      Min (ns)     Max (ns)       StdDev (ns)             Name         
+ --------  ---------------  ---------  -------------  -------------  ----------  -------------  ---------------  ----------------------
+     51.5   46,867,392,259        546   85,837,714.8  100,112,079.0       1,102    328,198,773     32,538,020.8  poll                  
+     14.5   13,164,989,771      6,991    1,883,134.0      163,452.0         350    102,705,844      5,641,769.6  ioctl                 
+     14.2   12,970,150,595        823   15,759,599.8    1,770,008.0         280    264,481,215     36,504,919.3  pthread_mutex_lock    
+      6.5    5,949,018,329         21  283,286,587.1  182,733,383.0  15,561,051  2,376,099,370    490,114,658.1  pthread_cond_wait     
+      6.4    5,860,504,461          9  651,167,162.3   24,887,262.0       6,853  5,076,408,399  1,667,662,189.0  pthread_join          
+      4.0    3,615,433,294      1,755    2,060,076.0    2,058,910.0   2,056,295      2,257,008         10,971.2  nanosleep             
+      0.7      674,015,069        143    4,713,392.1      678,134.0         321     74,419,183     10,427,326.7  pthread_rwlock_wrlock 
+      0.7      658,480,957        280    2,351,717.7       18,961.0       2,735     26,222,280      5,250,396.8  mmap                  
+      0.3      311,710,661        379      822,455.6        6,122.0       1,804    131,387,850      6,938,645.1  open64                
+      0.2      224,158,424        212    1,057,351.1        9,989.0       1,783     26,494,871      4,118,300.4  munmap                
+      0.2      185,667,936        248      748,661.0       15,134.5       9,158     37,707,663      3,273,167.3  mmap64                
+      0.2      179,493,405        364      493,113.8      567,964.0         721      1,506,936        350,745.9  fclose                
+      0.1      134,518,685     11,180       12,032.1          681.0          49        957,708         65,130.1  fread                 
+      0.1      116,096,414        302      384,425.2      240,558.5       1,343     20,513,664      1,207,335.2  fopen                 
+      0.1       52,824,152      2,227       23,719.9          591.0          50      3,490,993        138,463.1  fwrite                
+      0.0       18,832,996         68      276,955.8      277,770.0     157,200        465,379         46,760.1  fopen64               
+      0.0       17,668,002        485       36,428.9          592.0         391        379,444         92,106.0  read                  
+      0.0       16,570,695         79      209,755.6      127,223.0      20,068      5,626,880        623,799.7  sem_timedwait         
+      0.0        7,593,073         20      379,653.7      333,146.0     239,878        872,425        157,950.6  pthread_create        
+      0.0        5,393,365          2    2,696,682.5    2,696,682.5   1,972,135      3,421,230      1,024,664.9  pthread_rwlock_rdlock 
+      0.0          315,244         82        3,844.4        3,817.5         902          8,155          1,434.1  write                 
+      0.0          255,328        466          547.9          451.0         131          6,632            514.2  fcntl                 
+      0.0          169,968         72        2,360.7        2,053.5          50         15,921          2,432.9  fflush                
+      0.0          118,875        134          887.1          401.0          70         12,865          1,563.0  pthread_cond_signal   
+      0.0           76,114         51        1,492.4           70.0          50         72,709         10,171.8  fgets                 
+      0.0           48,102          3       16,034.0       21,160.0       1,152         25,790         13,094.5  pipe2                 
+      0.0           47,691         10        4,769.1        1,217.5         932         36,149         11,033.8  pthread_cond_broadcast
+      0.0           40,894         64          639.0          586.5         190          1,533            304.2  dup                   
+      0.0           40,266          7        5,752.3        5,400.0       1,362         10,771          3,486.4  open                  
+      0.0           21,090          2       10,545.0       10,545.0       5,982         15,108          6,453.1  socket                
+      0.0           15,399          1       15,399.0       15,399.0      15,399         15,399              0.0  connect               
+      0.0            7,932         64          123.9           50.0          40          1,452            196.1  pthread_mutex_trylock 
+      0.0            4,168          1        4,168.0        4,168.0       4,168          4,168              0.0  bind                  
+      0.0            1,904          2          952.0          952.0         792          1,112            226.3  fputc                 
+      0.0            1,132          1        1,132.0        1,132.0       1,132          1,132              0.0  listen                
+
+Processing [conv2d_timeline.sqlite] with [/opt/nvidia/nsight-systems/2023.4.4/host-linux-x64/reports/cuda_api_sum.py]... 
+
+ ** CUDA API Summary (cuda_api_sum):
+
+ Time (%)  Total Time (ns)  Num Calls    Avg (ns)       Med (ns)      Min (ns)    Max (ns)    StdDev (ns)            Name         
+ --------  ---------------  ---------  -------------  -------------  ----------  -----------  ------------  ----------------------
+     56.0    9,885,738,152         48  205,952,878.2  212,466,174.0  66,774,102  383,201,928  69,719,017.2  cudaHostAlloc         
+     20.5    3,621,138,495         56   64,663,187.4   28,296,775.5     293,460  346,085,273  72,592,994.5  cudaMalloc            
+     13.9    2,451,214,581         48   51,066,970.4   49,702,873.0  15,397,619  101,754,218  23,512,269.0  cudaFreeHost          
+      7.8    1,375,784,930         56   24,567,588.0   19,717,284.5     232,704   90,557,407  22,079,488.1  cudaFree              
+      0.8      135,651,376         75    1,808,685.0      820,827.0      49,124   14,000,372   2,687,103.2  cudaStreamSynchronize 
+      0.4       73,030,725        209      349,429.3        6,864.0       3,677   22,273,363   1,932,960.4  cudaLaunchKernel      
+      0.4       66,123,040         16    4,132,690.0      410,769.0       8,396   16,836,506   5,923,435.2  cudaStreamDestroy     
+      0.2       40,502,698         16    2,531,418.6      458,399.5      17,183   27,826,091   6,951,833.0  cudaStreamCreate      
+      0.1       15,465,390        402       38,471.1        9,162.0       3,036    3,440,838     197,635.4  cudaMemcpyAsync       
+      0.0            3,166          1        3,166.0        3,166.0       3,166        3,166           0.0  cuModuleGetLoadingMode
+
+Processing [conv2d_timeline.sqlite] with [/opt/nvidia/nsight-systems/2023.4.4/host-linux-x64/reports/cuda_gpu_kern_sum.py]... 
+
+ ** CUDA GPU Kernel Summary (cuda_gpu_kern_sum):
+
+ Time (%)  Total Time (ns)  Instances  Avg (ns)  Med (ns)  Min (ns)  Max (ns)  StdDev (ns)                     Name                    
+ --------  ---------------  ---------  --------  --------  --------  --------  -----------  -------------------------------------------
+     91.8        6,941,948        201  34,537.1  16,064.0     3,456   231,779     45,322.3  conv2D(float *, float *, float *, int, int)
+      8.2          617,125          8  77,140.6  73,264.5    72,289    89,441      7,353.1  he_normal(float *, unsigned int)           
+
+Processing [conv2d_timeline.sqlite] with [/opt/nvidia/nsight-systems/2023.4.4/host-linux-x64/reports/cuda_gpu_mem_time_sum.py]... 
+
+ ** CUDA GPU MemOps Summary (by Time) (cuda_gpu_mem_time_sum):
+
+ Time (%)  Total Time (ns)  Count  Avg (ns)   Med (ns)   Min (ns)  Max (ns)   StdDev (ns)           Operation          
+ --------  ---------------  -----  ---------  ---------  --------  ---------  -----------  ----------------------------
+     50.8      106,649,284    201  530,593.5  258,563.0    16,897  4,038,415    728,696.0  [CUDA memcpy Host-to-Device]
+     49.2      103,191,548    201  513,390.8  225,346.0    13,536  3,508,514    715,468.8  [CUDA memcpy Device-to-Host]
+
+Processing [conv2d_timeline.sqlite] with [/opt/nvidia/nsight-systems/2023.4.4/host-linux-x64/reports/cuda_gpu_mem_size_sum.py]... 
+
+ ** CUDA GPU MemOps Summary (by Size) (cuda_gpu_mem_size_sum):
+
+ Total (MB)  Count  Avg (MB)  Med (MB)  Min (MB)  Max (MB)  StdDev (MB)           Operation          
+ ----------  -----  --------  --------  --------  --------  -----------  ----------------------------
+  2,060.356    201    10.251     4.503     0.249    71.361       14.506  [CUDA memcpy Device-to-Host]
+  2,060.356    201    10.251     4.503     0.249    71.361       14.506  [CUDA memcpy Host-to-Device]
