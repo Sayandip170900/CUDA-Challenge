@@ -55,12 +55,3 @@ Implement and time an AWQ pipeline that:
   5. `dequantizeTiled` to multiply with on-the-fly dequantization.
   6. `relu` for nonlinearity.
 - Uses `cudaEvent` to measure total time covering kernels and host-side work.
-
-## Notes
-- Unified memory simplifies data transfer for this demo.
-- Tiled compute reduces global memory traffic and improves reuse.
-- The pipeline mirrors practical AWQ deployments where activation-aware scaling improves int8 accuracy.
-
-## Suggested File Names (for the CUDA project)
-- `awq_day58.cu` — kernels and `main`.
-- `awq_utils.cuh` — helpers for stats and scaling.
